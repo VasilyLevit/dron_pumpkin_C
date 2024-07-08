@@ -17,31 +17,18 @@ tsize - размер хвоста
 //  Инициализирующие константы
 #define MIN_Y 2
 #define DELAY_START 0.1
-// #define SEED_NUMBER 5
 #define PLAYERS 1
 #define CONTROLS 2 // количество наборов клавиш управления
 #define MAX_FOOD_SIZE 20
+#define START_TAIL_SIZE 0
+#define MAX_TAIL_SIZE 100
+#define FOOD_EXPIRE_SECONDS 10
+#define STOP_GAME KEY_F(10)
+#define PAUSE_GAME 'p'
 
 void setColor(int);
 
-typedef enum
-{
-    LEFT = 1,
-    UP,
-    RIGHT,
-    DOWN
-} Direction;
-enum
-{
-    STOP_GAME = KEY_F(10),
-    PAUSE_GAME = 'p'
-};
-enum
-{
-    MAX_TAIL_SIZE = 100,
-    START_TAIL_SIZE = 3,
-    FOOD_EXPIRE_SECONDS = 10
-};
+typedef enum {LEFT = 1, UP, RIGHT, DOWN} Direction;
 
 // Управление движением
 // Коды управления змейкой и присвоенные клавиши хранятся в структурах. Змейка управляется нажатием клавиш «вверх», «вниз», «вправо», «влево».
