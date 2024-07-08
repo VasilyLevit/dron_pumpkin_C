@@ -18,14 +18,15 @@ tsize - размер хвоста
 #define MIN_Y 2
 #define DELAY_START 0.1
 #define SEED_NUMBER 5
-#define PLAYERS 2
+#define PLAYERS 1
 #define CONTROLS 2 //количество наборов клавиш управления
+#define MAX_FOOD_SIZE 20
 
 void setColor(int);
 
 typedef enum{LEFT = 1, UP, RIGHT, DOWN} Direction;
 enum {STOP_GAME = KEY_F(10), PAUSE_GAME = 'p'};
-enum {MAX_TAIL_SIZE = 100, START_TAIL_SIZE = 3, MAX_FOOD_SIZE = 20, FOOD_EXPIRE_SECONDS = 10};
+enum {MAX_TAIL_SIZE = 100, START_TAIL_SIZE = 3, FOOD_EXPIRE_SECONDS = 10};
 
 // Управление движением
 // Коды управления змейкой и присвоенные клавиши хранятся в структурах. Змейка управляется нажатием клавиш «вверх», «вниз», «вправо», «влево».
@@ -60,6 +61,7 @@ struct food {
     time_t put_time;    // время установки
     char point;         // символ еды
     uint8_t isEaten;    // состояние - была ли еда съедена 0 или нет 1
+    int color;          //цвет еды
 } food[MAX_FOOD_SIZE];  // массив точек еды
 
 // инициализация клавиш управления
@@ -148,7 +150,8 @@ void go(struct snake_t *head)
     refresh();
 }
 
-/* Движение хвоста с учетом движения головы */
+/* Функция движение хвоста (собранного урожая) за головой (дроном) 
+принимает: положение головы (дрона)*/
 void goTail(struct snake_t *head)
 {
     char ch = '*';
@@ -164,7 +167,7 @@ void goTail(struct snake_t *head)
     head->tail[0].y = head->y;
 }
 
-// изменение направления движения
+// Функция изменения направления движения
 void changeDirection(snake_t *snake, const int32_t key)
 {
     for (int i = 0; i < CONTROLS; i++)
@@ -195,24 +198,26 @@ int checkDirection(snake_t *snake, int32_t key)
     return 1;
 }
 
-// обновление/размещение еды(зерна) на поле - генерируем одно значение
+/* обновление/размещение еды(зерна) на поле 
+принимает: одно зерно (ссылка на элемента массива еды)*/
 void putFoodSeed(struct food *fp)
 {
     int max_x = 0, max_y = 0;
     char spoint[2] = {0}; // массив символьных значений еды
     getmaxyx(stdscr, max_y, max_x);
-    mvprintw(fp->y, fp->x, " ");
+    // mvprintw(fp->y, fp->x, " ");
     fp->x = rand() % (max_x - 1);     // генерируем случайную координату х размещения еды
     fp->y = rand() % (max_y - 2) + 1; // генерируем координату y еды не занимая верхнюю строку
     fp->put_time = time(NULL);
-    fp->point = '$'; // записываем символ еды
-    
-    fp->isEaten = 1;
+    fp->point = 'D'; //записываем символ еды    
+    fp->isEaten = 1; //записываем статус еды
+    fp->color = 3; //цвет еды
     spoint[0] = fp->point;
+    attron(COLOR_PAIR(fp->color));
     mvprintw(fp->y, fp->x, "%s", spoint);
 }
 
-/* Размещаем еду на поле */
+/* Функция инициализации (размещения) еды на поле*/
 void putFood(struct food f[], size_t number_seeds)
 {
     for (size_t i = 0; i < number_seeds; i++)
@@ -221,7 +226,7 @@ void putFood(struct food f[], size_t number_seeds)
     }
 }
 
-/* обновление еды.
+/* Функция обновление еды.
 Если через какое-то время(FOOD_EXPIRE_SECONDS) точка устаревает, или же она была съедена (food[i].isEaten==0), то происходит её повторная отрисовка и обновление времени */
 void refreshFood(struct food f[], int nfood)
 {
@@ -238,16 +243,16 @@ void refreshFood(struct food f[], int nfood)
     }
 }
 
-/* Поедание зерна змейкой
-возникает, когда координаты головы совпадают с координатой зерна.
-В этом случае зерно помечается как isEaten=0.
-Возвращаемая 1 должна инициировать увеличение хвоста*/
+/* Функция поедание зерна змейкой 
+изменяет статус еды isEaten
+возвращает логический статус подедания 1 - еда съедена*/
 _Bool haveEat(struct snake_t *head, struct food f[])
 {
     for (size_t i = 0; i < MAX_FOOD_SIZE; i++)
+        //если координаты головы (дрона) совпали с координатами несъеденной (несобранной) еды
         if (f[i].isEaten && head->x == f[i].x && head->y == f[i].y)
         {
-            f[i].isEaten = 0;
+            f[i].isEaten = 0; //помечаем еду как съеденную
             return 1;
         }
     return 0;
@@ -305,7 +310,7 @@ void pause(void)
 void startMenu() {
     initscr();              // Начать curses mode
     noecho();               // Отключаем echo() режим пока считываем символы getch
-    curs_set(FALSE);                // Отключаем курсор
+    curs_set(FALSE);        // Отключаем курсор
     cbreak();
     if(!has_colors()) {  // если цвет не поддерживается терминалом
         endwin();           // Завершаем режим curses mod
@@ -323,18 +328,18 @@ void startMenu() {
     attron(COLOR_PAIR(2));
     mvprintw(3, 1, "2. Exit");
     attron(COLOR_PAIR(1));
-    mvprintw(7, 30, "@*******************************************@");
+    mvprintw(7, 30,  "@*******************************************@");
     attron(COLOR_PAIR(2));
-    mvprintw(10, 32, "* S N A K E @ S N A K E @ S N A K E @ *");
+    mvprintw(10, 32, "*** H A R V E S T I N G   P U M P K I N S ***");
     mvprintw(13, 30, "@*******************************************@");
     char ch = '0';
     while (1)
     {
-        ch = getch();
+        ch = getch(); //номер действия из меню
         if (ch == '1') {
             clear();
             attron(COLOR_PAIR(2));
-            mvprintw(10, 50, "S N A K E");
+            mvprintw(10, 50, "P U M P K I N S");
             attron(COLOR_PAIR(1));
             mvprintw(20, 50, "Press any key ...");
             break;
@@ -370,14 +375,14 @@ void repairSeed(struct food f[], size_t nfood, struct snake_t *head) {
         } 
 }
 
-/* обновление*/
+/* Функция обновления положения дрона и урожая ой клавиши управления*/
 void update(struct snake_t *head, struct food f[], const int32_t key) {    
     go(head);
     goTail(head);
     if (checkDirection(head,key)) {
         changeDirection(head, key);
     }
-    refreshFood(food, SEED_NUMBER); // Обновляем еду
+    refreshFood(food, SEED_NUMBER); // Обновляем еду после смещения дрона
     if (haveEat(head,food)) {
         addTail(head);
     }
@@ -415,8 +420,8 @@ int main()
         initSnake(snakes, START_TAIL_SIZE, 10 + i * 10, 10 + i * 10, i);
     //назначаем наборы клавишь управления змейкам
     snakes[0]->controls = player1_controls; 
-    snakes[1]->controls = player2_controls;
-    initFood(food, MAX_FOOD_SIZE);  // установка начальных, нулевых значений еды
+    // snakes[1]->controls = player2_controls; //!!! не будет работать если дрон 1 (устранить)
+    // initFood(food, MAX_FOOD_SIZE);  // установка нулевых значений массива еды
     initscr();                      // Начать curses mode
     keypad(stdscr, TRUE);           // Включаем F1, F2, стрелки и т.д.
     raw();                          // Откдючаем line buffering
@@ -425,8 +430,8 @@ int main()
     // Печать в позиции x y (printw - печать в текущей позиции курсора)
     mvprintw(0, 0, " Use arrows for control. Press 'F10' for EXIT. Press 'P' for pause.");
     timeout(0); // Отключаем таймаут после нажатия клавиши в цикле (иначе цикл будет ожидать нажатие клавиш)
+    putFood(food, MAX_FOOD_SIZE);
     int key_pressed = 0;
-    putFood(food, SEED_NUMBER);
     
     // инициализация платитры цветов
     start_color();
@@ -438,6 +443,7 @@ int main()
     {
         begin = clock();       // фиксируем начальное время для расчете задержки
         key_pressed = getch(); // Считываем клавишу              
+        //отрисовка нового положения каждого дрона
         for (size_t i = 0; i < PLAYERS; i++) {
             update(snakes[i], food, key_pressed);
             if (isCrush(snakes[i]))
@@ -447,8 +453,8 @@ int main()
         if (key_pressed == PAUSE_GAME)
             pause();
         
-        refresh(); // обновление экрана (если отключить или поставить после задержки, то хвост немного отстаёт от головы)
-        while ((double)(clock() - begin) / CLOCKS_PER_SEC < DELAY) // задержака
+        refresh(); //обновление экрана (если отключить или поставить после задержки, то хвост немного отстаёт от головы)
+        while ((double)(clock() - begin) / CLOCKS_PER_SEC < DELAY) //цикл задержаки между обновлением положения объектов (дронов и урожая)
         {}
     }
     for (size_t i = 0; i < PLAYERS; i++) {
