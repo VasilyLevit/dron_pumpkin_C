@@ -19,10 +19,10 @@ tsize - размер хвоста
 #define DELAY_START 0.1
 #define PLAYERS 1
 #define CONTROLS 2 // количество наборов клавиш управления
-#define MAX_FOOD_SIZE 20
+#define MAX_FOOD_SIZE 30
 #define START_TAIL_SIZE 0
 #define MAX_TAIL_SIZE 100
-#define FOOD_EXPIRE_SECONDS 10
+#define FOOD_EXPIRE_SECONDS 50 // максимальное время созревания
 #define STOP_GAME KEY_F(10)
 #define PAUSE_GAME 'p'
 
@@ -207,7 +207,7 @@ int checkDirection(snake_t *snake, int32_t key)
     return 1;
 }
 
-/* обновление/размещение еды(зерна) на поле
+/* размещение зерна на поле
 принимает: одно зерно (ссылка на элемента массива еды)*/
 void putFoodSeed(struct food *fp)
 {
@@ -217,16 +217,17 @@ void putFoodSeed(struct food *fp)
     // mvprintw(fp->y, fp->x, " ");
     fp->x = rand() % (max_x - 1);     // генерируем случайную координату х размещения еды
     fp->y = rand() % (max_y - 2) + 1; // генерируем координату y еды не занимая верхнюю строку
-    fp->put_time = time(NULL);
+    fp->put_time = time(NULL) + rand() % FOOD_EXPIRE_SECONDS; // генерация времени созревания тыквы
     fp->point = 'D'; // записываем символ еды
     fp->isEaten = 1; // записываем статус еды
     fp->color = 3;   // цвет еды
     spoint[0] = fp->point;
     attron(COLOR_PAIR(fp->color));
     mvprintw(fp->y, fp->x, "%s", spoint);
+    // mvprintw(fp->y, fp->x, "%s", &(fp->point)); // выводит D^A вместо D
 }
 
-/* Функция изменения состояния посевов
+/* Функция изменения состояния посева
 !!!!! добавить радномное созревание - через которое посевы будут желтеть*/
 void changeSeed(struct food *fp)
 {
@@ -237,7 +238,7 @@ void changeSeed(struct food *fp)
     fp->color = 4;        // меням цвет созревшего плода
     spoint[0] = fp->point;
     attron(COLOR_PAIR(fp->color));
-    mvprintw(fp->y, fp->x, "%s", spoint); //??? почему если вместо spoint поставить fp->point ошибка сегментации
+    mvprintw(fp->y, fp->x, "%s", spoint); //??? почему если вместо spoint поставить fp->point ошибка сегментации (потому что функция требует указатель, а fp->point возвращает значение, потому применили массив)
 }
 
 /* Функция инициализации (размещения) еды на поле*/
@@ -249,20 +250,14 @@ void putFood(struct food f[], size_t number_seeds)
     }
 }
 
-/* Функция обновление еды.
+/* Функция проверки посевов на время созревание
 Если через какое-то время(FOOD_EXPIRE_SECONDS) точка устаревает, или же она была съедена (food[i].isEaten==0), то происходит её повторная отрисовка и обновление времени */
 void refreshFood(struct food f[], int nfood)
 {
-    // пробегаем по массиву еды и проверяем время и была ли съедена
-    for (size_t i = 0; i < nfood; i++)
+    for (size_t i = 0; i < nfood; i++) // пробегаем по массиву еды
     {
-        if (f[i].put_time) // если у точки время не нулевое
-        {
-            if (!f[i].isEaten || (time(NULL) - f[i].put_time) > FOOD_EXPIRE_SECONDS)
-            {
-                changeSeed(&f[i]);
-            }
-        }
+        if (f[i].isEaten && (time(NULL) > f[i].put_time))
+            changeSeed(&f[i]); // изменяем посев на созревший
     }
 }
 
