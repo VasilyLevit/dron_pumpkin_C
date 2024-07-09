@@ -99,7 +99,8 @@ void initHead(struct snake_t *head, int x, int y)
     head->direction = RIGHT; // начальное нарпавление движения
 }
 
-// инициализация змейки
+/* Функция инициализация змейки 
+принимает: size - начальная длина змеи */ 
 void initSnake(snake_t *head[], size_t size, int x, int y, int i)
 {
     head[i] = (snake_t *)malloc(sizeof(snake_t));
@@ -217,7 +218,7 @@ void putFoodSeed(struct food *fp)
     // mvprintw(fp->y, fp->x, " ");
     fp->x = rand() % (max_x - 1);     // генерируем случайную координату х размещения еды
     fp->y = rand() % (max_y - 2) + 1; // генерируем координату y еды не занимая верхнюю строку
-    fp->put_time = time(NULL) + rand() % FOOD_EXPIRE_SECONDS; // генерация времени созревания тыквы
+    fp->put_time = time(NULL) + rand() % FOOD_EXPIRE_SECONDS; // генерация времени созревания посева
     fp->point = 'D'; // записываем символ еды
     fp->isEaten = 1; // записываем статус еды
     fp->color = 3;   // цвет еды
@@ -227,13 +228,9 @@ void putFoodSeed(struct food *fp)
     // mvprintw(fp->y, fp->x, "%s", &(fp->point)); // выводит D^A вместо D
 }
 
-/* Функция изменения состояния посева
-!!!!! добавить радномное созревание - через которое посевы будут желтеть*/
-void changeSeed(struct food *fp)
+/* Функция изменения созревшего посева () */
+void changeMaturateSeed(struct food *fp)
 {
-    // int max_x = 0, max_y = 0;
-    // getmaxyx(stdscr, max_y, max_x);
-    // fp->put_time = time(NULL);
     char spoint[2] = {0}; // массив символьных значений еды
     fp->color = 4;        // меням цвет созревшего плода
     spoint[0] = fp->point;
@@ -250,14 +247,14 @@ void putFood(struct food f[], size_t number_seeds)
     }
 }
 
-/* Функция проверки посевов на время созревание
-Если через какое-то время(FOOD_EXPIRE_SECONDS) точка устаревает, или же она была съедена (food[i].isEaten==0), то происходит её повторная отрисовка и обновление времени */
-void refreshFood(struct food f[], int nfood)
+/* Функция проверки созревания посевов
+Если текущее время больше времени созревания несьеденного посева (isEaten = 1), вызываем функцию изменения созревания посева */
+void checkMaturateSeed(struct food f[], int nfood)
 {
     for (size_t i = 0; i < nfood; i++) // пробегаем по массиву еды
     {
         if (f[i].isEaten && (time(NULL) > f[i].put_time))
-            changeSeed(&f[i]); // изменяем посев на созревший
+            changeMaturateSeed(&f[i]); // изменяем посев на созревший (меняем цвет)
     }
 }
 
@@ -303,7 +300,7 @@ void printLevel(struct snake_t *head)
 {
     int max_x = 0, max_y = 0;
     getmaxyx(stdscr, max_y, max_x);
-    mvprintw(0, max_x - 10, " LEVEL: %d ", head->tsize - START_TAIL_SIZE); // вывод уровня в правом верхнем углу
+    mvprintw(0, max_x - 10, " LEVEL: %d ", head->tsize - 1); // вывод уровня в правом верхнем углу
 }
 
 /* вывод результата при завершении игры */
@@ -412,7 +409,7 @@ void update(struct snake_t *head, struct food f[], const int32_t key)
     {
         changeDirection(head, key);
     }
-    refreshFood(food, MAX_FOOD_SIZE); // Обновляем еду после смещения дрона
+    checkMaturateSeed(food, MAX_FOOD_SIZE); // Обновляем еду после смещения дрона
     if (haveEat(head, food))
     {
         addTail(head);
@@ -444,6 +441,7 @@ void setColor(int objectType)
     }
     }
 }
+
 
 // В теле main инициализируем змейку, прописываем настройки управления. Игра завершается при нажатии клавиши завершения игры – «F10». Пока клавиша не нажата, запускаем змейку.
 int main()
